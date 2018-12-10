@@ -1,0 +1,39 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:2.0.5.RELEASE")
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'application'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+group 'org.beyene.zmq'
+version '1.0-SNAPSHOT'
+
+mainClassName = 'org.beyene.zmq.Application'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:all" << "-Werror"
+    }
+}
+
+dependencies {
+    compile 'org.zeromq:jeromq:0.4.3'
+    compile 'org.springframework.boot:spring-boot-starter'
+    testCompile 'junit:junit:4.12'
+}
+
