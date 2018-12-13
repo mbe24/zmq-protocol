@@ -36,4 +36,3 @@ dependencies {
     compile 'org.springframework.boot:spring-boot-starter'
     testCompile 'junit:junit:4.12'
 }
-
