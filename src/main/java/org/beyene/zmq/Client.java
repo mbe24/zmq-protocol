@@ -41,9 +41,11 @@ public class Client {
 
     @Scheduled(fixedDelay = 500)
     public void send() {
+        int number = new Random().nextInt(100);
+
         for (int i = 0; i < poller.getSize(); i++) {
             Socket currentSocket = poller.getSocket(i);
-            currentSocket.send(Objects.toString(new Random().nextInt(100)));
+            currentSocket.send(Objects.toString(number));
 
             poller.poll(10);
             if (poller.pollin(i)) {

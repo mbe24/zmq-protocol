@@ -7,34 +7,67 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import picocli.CommandLine;
+import picocli.CommandLine.ParameterException;
+import picocli.CommandLine.UnmatchedArgumentException;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @EnableScheduling
 @SpringBootApplication
 public class Application {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws Exception {
+        Options options = new Options();
+        CommandLine cmd = new CommandLine(options);
+        cmd.setUsageHelpWidth(120);
+
+        try {
+            cmd.parse(args);
+            if (cmd.isUsageHelpRequested()) {
+                cmd.usage(System.out);
+                return;
+            } else if (cmd.isVersionHelpRequested()) {
+                cmd.printVersionHelp(System.out);
+                return;
+            }
+
+            new Application().runWith(options);
+        } catch (ParameterException ex) {
+            System.err.println(ex.getMessage());
+            if (!UnmatchedArgumentException.printSuggestions(ex, System.err)) {
+                ex.getCommandLine().usage(System.err);
+            }
+        }
+    }
+
+    public void runWith(Options options) throws Exception {
         SpringApplication application = new SpringApplication(Application.class);
         application.setWebApplicationType(WebApplicationType.NONE);
-        registerBeans(application);
-        ConfigurableApplicationContext context = application.run(args);
+        registerBeans(application, options);
+        ConfigurableApplicationContext context = application.run();
 
         Thread.sleep(2_500);
         int exitCode = SpringApplication.exit(context, () -> 0);
         System.exit(exitCode);
     }
 
-    private static void registerBeans(SpringApplication application) {
-        List<String> addresses = Arrays.asList("tcp://*:5555", "tcp://*:5556");
-        Server serverA = new Server(addresses.get(0), (x) -> 2 * x);
-        application.addInitializers((GenericApplicationContext ctx) -> ctx.registerBean("serverA", Server.class, () -> serverA));
+    private void registerBeans(SpringApplication application, Options options) {
+        List<Function<Integer, Integer>> functions = IntStream.range(2, 2 + options.endpoints.size())
+                .mapToObj(i -> (Function<Integer, Integer>) (x) -> i * x)
+                .collect(Collectors.toList());
 
-        Server serverB = new Server(addresses.get(1), (x) -> 3 * x);
-        application.addInitializers((GenericApplicationContext ctx) -> ctx.registerBean("serverB", Server.class, () -> serverB));
+        for (int i = 0; i < options.endpoints.size(); i++) {
+            String endpoint = options.endpoints.get(i);
+            Server server = new Server(endpoint, functions.get(i));
+            application.addInitializers(
+                    (GenericApplicationContext ctx) -> ctx.registerBean(endpoint, Server.class, () -> server));
+        }
 
-        Client client = new Client(addresses);
+        Client client = new Client(options.endpoints);
         application.addInitializers((GenericApplicationContext ctx) -> ctx.registerBean(Client.class, () -> client));
     }
 }

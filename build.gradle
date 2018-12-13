@@ -33,6 +33,7 @@ gradle.projectsEvaluated {
 
 dependencies {
     compile 'org.zeromq:jeromq:0.4.3'
+    compile 'info.picocli:picocli:3.8.2'
     compile 'org.springframework.boot:spring-boot-starter'
     testCompile 'junit:junit:4.12'
 }
