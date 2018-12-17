@@ -1,0 +1,20 @@
+syntax = "proto2";
+
+option java_package = "org.beyene.zmq.message";
+option java_outer_classname = "Dto";
+
+enum Type {
+  COMPUTE = 0;
+  ECHO = 1;
+}
+
+message Request {
+  required Type type = 1 [default = COMPUTE];
+  required int32 operand = 2;
+}
+
+message Response {
+  required Type type = 1 [default = COMPUTE];
+  required int32 operand = 2;
+  optional int32 result = 3;
+}

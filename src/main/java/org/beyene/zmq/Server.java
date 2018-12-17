@@ -1,5 +1,6 @@
 package org.beyene.zmq;
 
+import org.beyene.zmq.message.Dto;
 import org.zeromq.ZContext;
 import org.zeromq.ZFrame;
 import org.zeromq.ZMQ;
@@ -9,7 +10,6 @@ import org.zeromq.ZMsg;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -46,7 +46,6 @@ public class Server implements Runnable {
             if (poller.pollin(0)) {
                 Socket currentSocket = poller.getSocket(0);
                 ZMsg request = ZMsg.recvMsg(currentSocket);
-                System.out.printf("%s: %s%n", address, request);
 
                 if (request == null || request.size() != 2)
                     continue;
@@ -58,13 +57,27 @@ public class Server implements Runnable {
 
     private void handleRequest(ZMsg request, Socket currentSocket) {
         ZFrame identity = request.poll();
-        String message = request.poll().getString(ZMQ.CHARSET);
+
+        Dto.Request req = null;
+        try {
+            req = Dto.Request.parseFrom(request.poll().getData());
+            request.destroy();
+        } catch (Exception e) {
+            return;
+        }
+
+        System.out.printf("%s: %n%s%n", address, req);
 
         ZMsg response = new ZMsg();
         response.add(identity.getData()); // specify receiver by sending identity
         response.add(new byte[0]); // empty delimiter frame for dealer socket
-        response.add(message);
-        response.add(Objects.toString(function.apply(Integer.parseInt(message))));
+
+        Dto.Response res = Dto.Response.newBuilder()
+                .setType(Dto.Type.COMPUTE)
+                .setOperand(req.getOperand())
+                .setResult(function.apply(req.getOperand()))
+                .build();
+        response.add(res.toByteArray());
 
         response.send(currentSocket);
     }

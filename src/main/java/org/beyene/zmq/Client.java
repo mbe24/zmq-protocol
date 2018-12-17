@@ -1,5 +1,6 @@
 package org.beyene.zmq;
 
+import org.beyene.zmq.message.Dto;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
@@ -10,7 +11,6 @@ import org.zeromq.ZMsg;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
 
 public class Client {
@@ -45,15 +45,30 @@ public class Client {
 
         for (int i = 0; i < poller.getSize(); i++) {
             Socket currentSocket = poller.getSocket(i);
-            currentSocket.send(Objects.toString(number));
+
+            Dto.Request request = Dto.Request.newBuilder().setType(Dto.Type.COMPUTE).setOperand(number).build();
+            currentSocket.send(request.toByteArray());
 
             poller.poll(10);
             if (poller.pollin(i)) {
                 ZMsg message = ZMsg.recvMsg(currentSocket);
-                System.out.println("CLIENT      : " + message);
-                message.destroy();
+                handleResponse(message);
             }
         }
+    }
+
+    private void handleResponse(ZMsg message) {
+        message.poll(); // delimiter frame
+
+        Dto.Response req = null;
+        try {
+            req = Dto.Response.parseFrom(message.poll().getData());
+        } catch (Exception e) {
+            return;
+        }
+
+        System.out.printf("CLIENT      :%n%s%n", req);
+        message.destroy();
     }
 
     @PreDestroy
