@@ -1,5 +1,5 @@
 # zmq-protocol
-POC client/server application based on JeroMQ enhanced with message (de)serialization
+POC client/server application based on the Java implementation of ZeroMQ, namely JeroMQ, enhanced with message (de)serialization powered by protobuf.
 
 ### Usage ###
 
